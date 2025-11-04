@@ -2,26 +2,92 @@
 
 {% block content %}
 <div class="container my-5">
-    <h1 class="mb-4">Jewellery Image Generator</h1>
+    <h1 class="mb-4 text-center fw-bold">Design Your Dream Jewellery ✨</h1>
+    <p class="text-center text-muted mb-5">
+        Describe your jewellery idea and let our AI bring it to life.
+    </p>
 
+    <!-- Form -->
     <form method="post" class="mb-4">
         {% csrf_token %}
         <div class="mb-3">
-            <label for="prompt" class="form-label">Enter Jewellery Description:</label>
+            <label for="prompt" class="form-label fw-semibold">Enter Jewellery Description:</label>
             <textarea id="prompt" name="prompt" class="form-control" rows="5" placeholder="A luxurious 22k gold necklace with diamonds...">{{ request.POST.prompt }}</textarea>
         </div>
-        <button type="submit" class="btn btn-primary">Generate</button>
+        <button type="submit" class="btn btn-warning px-4 fw-semibold">Generate</button>
     </form>
 
+    <!-- Error -->
+    {% if error %}
+        <div class="alert alert-danger mt-3">{{ error }}</div>
+    {% endif %}
+
+    <!-- Generated Image -->
     {% if generated_image_url %}
-    <div class="mt-4">
-        <h2>Generated Image:</h2>
-        <img src="{{ generated_image_url }}" alt="Generated Jewellery" class="img-fluid border">
+    <div class="mt-5 text-center">
+        <h3 class="fw-semibold mb-3">Generated Image:</h3>
+        <img src="{{ generated_image_url }}" alt="Generated Jewellery"
+             class="img-fluid border rounded shadow-sm"
+             style="max-width:400px; cursor:pointer;"
+             data-bs-toggle="modal"
+             data-bs-target="#imageModal"
+             data-bs-src="{{ generated_image_url }}">
     </div>
     {% endif %}
 
-    {% if error %}
-    <div class="alert alert-danger">{{ error }}</div>
-    {% endif %}
+    <hr class="my-5">
+
+    <!-- Previous Images -->
+    <h4 class="fw-semibold">Your Previous Generations:</h4>
+    <div class="d-flex flex-wrap gap-3">
+        {% for img in previous_images %}
+            <div>
+                <img src="{{ img.image.url }}" alt="{{ img.prompt }}"
+                     class="border rounded shadow-sm"
+                     style="width:200px; cursor:pointer;"
+                     data-bs-toggle="modal"
+                     data-bs-target="#imageModal"
+                     data-bs-src="{{ img.image.url }}">
+                <p class="small text-muted mt-2">{{ img.prompt|truncatechars:25 }}</p>
+            </div>
+        {% empty %}
+            <p>No images generated yet.</p>
+        {% endfor %}
+    </div>
 </div>
+
+<!-- 🔹 Bootstrap Modal -->
+<div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-fullscreen-sm-down modal-dialog-centered">
+    <div class="modal-content bg-white text-dark">
+      <div class="modal-header border-0">
+        <h5 class="modal-title">Preview</h5>
+        <button type="button" class="btn-close btn-close-dark" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center">
+        <img id="modalImage" src="" class="img-fluid rounded shadow-lg" alt="Preview Image">
+      </div>
+      <div class="modal-footer border-0 justify-content-center">
+        <a id="downloadBtn" href="#" class="btn btn-light" download>⬇️ Download</a>
+        <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 🔹 Script -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const imageModal = document.getElementById('imageModal');
+    const modalImage = document.getElementById('modalImage');
+    const downloadBtn = document.getElementById('downloadBtn');
+
+    imageModal.addEventListener('show.bs.modal', function (event) {
+        const trigger = event.relatedTarget;
+        const imageSrc = trigger.getAttribute('data-bs-src');
+        modalImage.src = imageSrc;
+        downloadBtn.href = imageSrc;
+    });
+});
+</script>
 {% endblock %}

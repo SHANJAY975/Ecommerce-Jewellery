@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Product,Category, Cart, CartItem, Favourite, Order, GoldRate
+from .models import Product,Category, Cart, CartItem, Favourite, Order, GoldRate, JewelleryRequest
+
 
 
 # Register your models here.
@@ -10,3 +11,5 @@ admin.site.register(Cart)
 admin.site.register(CartItem)
 admin.site.register(Order)
 admin.site.register(GoldRate)
+admin.site.register(JewelleryRequest)
+

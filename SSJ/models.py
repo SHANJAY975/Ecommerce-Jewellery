@@ -10,8 +10,7 @@ class Category(models.Model):
     wastage_percent = models.DecimalField(max_digits=5, decimal_places=2, default=15.00)
     def __str__(self):
         return self.name
-    
-    
+
 class Product(models.Model):
     product_name = models.CharField(max_length=100)
     product_description = models.TextField()
@@ -33,7 +32,6 @@ class Product(models.Model):
         from .models import GoldRate
         latest_rate = GoldRate.objects.latest('date')
         today_rate = latest_rate.rate_per_gram 
-
         weight = self.weight + (self.weight * (self.category.wastage_percent/100))
         Amount = weight * today_rate 
         total = Amount + self.category.making_charges
@@ -42,7 +40,6 @@ class Product(models.Model):
     def __str__(self):
         return self.product_name
     
-
 class Favourite(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="favourites")
     product = models.ForeignKey(Product, on_delete=models.CASCADE,  related_name='favourited_by')
@@ -111,10 +108,28 @@ class Order(models.Model):
     def __str__(self):
         return f"Order #{self.id} - {self.email}"
 
-
 class GoldRate(models.Model):
     date = models.DateField(default=timezone.now, unique=True)
     rate_per_gram = models.DecimalField(max_digits=10, decimal_places=2)
 
     def __str__(self):
         return f"{self.date} - ₹{self.rate_per_gram}"
+    
+class GeneratedImage(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="generated_images")
+    prompt = models.TextField()
+    image = models.ImageField(upload_to="generated/")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.prompt[:30]}"
+class JewelleryRequest(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='requests/')
+    weight = models.DecimalField(max_digits=6, decimal_places=2)
+    comments = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(default='Pending', max_length=20)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.weight}g - {self.status}"

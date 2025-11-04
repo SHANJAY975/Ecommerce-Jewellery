@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container text-center my-5">
+    <div class="p-5 shadow-sm rounded bg-light">
+        <h2 class="text-success fw-bold mb-3">✅ Request Sent Successfully!</h2>
+        <p class="text-muted">Your jewellery request has been submitted to our team. You’ll be redirected shortly...</p>
+        <p class="small text-secondary">(Redirecting in <span id="countdown">10</span> seconds)</p>
+    </div>
+</div>
+
+<script>
+    let seconds = 10;
+    const countdown = document.getElementById("countdown");
+
+    const interval = setInterval(() => {
+        seconds--;
+        countdown.textContent = seconds;
+        if (seconds <= 0) {
+            clearInterval(interval);
+            window.location.href = "{% url 'SSJ:all_products' %}";  // ✅ Django URL name
+        }
+    }, 1000);
+</script>
+
+{% endblock %}
