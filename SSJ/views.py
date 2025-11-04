@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from SSJ.models import Cart, CartItem, Category, Favourite, GoldRate, Product
 from django.http.response import HttpResponse
 from django.core.paginator import Paginator
-from .forms import AddProductForm, ForgotPasswordForm, RegisterForm, LoginForm, ResetPasswordForm, OrderForm
+from .forms import AddProductForm, ForgotPasswordForm, JewelleryRequestForm, RegisterForm, LoginForm, ResetPasswordForm, OrderForm
 from django.contrib import messages
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
@@ -18,9 +18,12 @@ import razorpay
 from django.conf import settings
 from .context_processors import cart
 import base64
-import os
 import requests
 from django.core.files.storage import default_storage
+import uuid
+from django.core.files.base import ContentFile
+
+from .models import GeneratedImage
 
 api_key = settings.API_KEY
 
@@ -84,7 +87,6 @@ def earrings(request):
     Title = 'Earrings'
     Sub_description = "Lorem ipsum dolor sit amet."
     return render(request, 'product_view.html',{'products':products, 'Title':Title, 'Sub_description':Sub_description})
-
 
 def necklaces(request):
     category = Category.objects.get(name="necklaces")
@@ -151,8 +153,6 @@ def delete_from_cart(request, item_id):
         cartitem.delete()
     previous_url = request.META.get('HTTP_REFERER')
     return redirect(previous_url)
-    
-
 
 def logout(request):
     auth_logout(request)
@@ -178,7 +178,6 @@ def forgot_password(request):
             messages.success(request, 'Reset mail has been sent')
     return render(request, 'forgot_password.html', {'form':form})
 
-
 def reset_password(request, uidb64, token):
     resetform = ResetPasswordForm()
     if request.method == 'POST':
@@ -200,7 +199,6 @@ def reset_password(request, uidb64, token):
                 messages.error(request, 'Invalid Link')
                 return redirect('SSJ:forgot_password')
     return render(request,'reset_password.html', {'form':resetform})
-
 
 def add_product(request):
     addproductform = AddProductForm()
@@ -273,47 +271,98 @@ def payment_success(request):
     """Render success page"""
     return render(request, "success.html")
 
+@login_required
 def generate_jewellery_image(request):
+    """
+    Generate jewellery images using Stability AI API, store in database,
+    and display both newly generated and previously generated images.
+    """
     generated_image_url = None
     user = request.user
 
+    # Fetch previous images by the logged-in user
+    previous_images = GeneratedImage.objects.filter(user=user).order_by("-created_at")
+
     if request.method == "POST":
-        user_description =  request.POST.get("prompt")
-        # Template prompt that enforces style, composition, and background
-        full_prompt = f"Generate image of 22k gold ornaments with white background. Description:{user_description}"
+        user_description = request.POST.get("prompt")
+
+        if not user_description:
+            return render(request, "generate.html", {
+                "error": "Please enter a description.",
+                "previous_images": previous_images
+            })
+
+        # A descriptive prompt for the AI model
+        full_prompt = f"Generate image of 22k gold ornaments with white background. Description: {user_description}"
         engine_id = "stable-diffusion-xl-1024-v1-0"
 
-        response = requests.post(
-            f"https://api.stability.ai/v1/generation/{engine_id}/text-to-image",
-            headers={
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-                "Authorization": f"Bearer {api_key}"
-            },
-            json={
-                "text_prompts": [{"text": user_description}],
-                "cfg_scale": 7,
-                "height": 1024,
-                "width": 1024,
-                "samples": 1,
-                "steps": 30,
-            },
-        )
+        try:
+            # API call to Stability AI
+            response = requests.post(
+                f"https://api.stability.ai/v1/generation/{engine_id}/text-to-image",
+                headers={
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "Authorization": f"Bearer {api_key}"
+                },
+                json={
+                    "text_prompts": [{"text": full_prompt}],
+                    "cfg_scale": 7,
+                    "height": 1024,
+                    "width": 1024,
+                    "samples": 1,
+                    "steps": 30,
+                },
+            )
 
-        if response.status_code == 200:
-            data = response.json()
-            image_data = data["artifacts"][0]["base64"]
-            
-            # Save image to MEDIA_ROOT
-            output_dir = os.path.join(settings.MEDIA_ROOT, "generated")
-            os.makedirs(output_dir, exist_ok=True)
-            file_path = os.path.join(output_dir, "generated_image.png")
-            
-            with open(file_path, "wb") as f:
-                f.write(base64.b64decode(image_data))
-            
-            generated_image_url = default_storage.url(f"generated/generated_image.png")
-        else:
-            return render(request, "generate.html", {"error": response.text})
+            if response.status_code == 200:
+                data = response.json()
+                image_data = data["artifacts"][0]["base64"]
 
-    return render(request, "generate.html", {"generated_image_url": generated_image_url})
+                # Decode base64 image and create a unique filename
+                unique_name = f"{user.username}_{uuid.uuid4().hex}.png"
+                image_file = ContentFile(base64.b64decode(image_data), name=unique_name)
+
+                # Save record in the database
+                generated_image = GeneratedImage.objects.create(
+                    user=user,
+                    prompt=user_description,
+                    image=image_file,
+                )
+
+                generated_image_url = generated_image.image.url
+
+            else:
+                return render(request, "generate.html", {
+                    "error": f"API Error: {response.status_code} - {response.text}",
+                    "previous_images": previous_images
+                })
+
+        except requests.exceptions.RequestException as e:
+            return render(request, "generate.html", {
+                "error": f"Request failed: {str(e)}",
+                "previous_images": previous_images
+            })
+
+    return render(request, "generate.html", {
+        "generated_image_url": generated_image_url,
+        "previous_images": previous_images,
+    })
+
+@login_required
+def request_jewellery(request):
+    if request.method == 'POST':
+        form = JewelleryRequestForm(request.POST, request.FILES)
+        if form.is_valid():
+            print("Inside")
+            req = form.save(commit=False)
+            req.user = request.user
+            req.save()
+            return redirect('SSJ:request_success')
+    else:
+        form = JewelleryRequestForm()
+
+    return render(request, 'customrequest.html', {'form': form})
+
+def request_success(request):
+    return render(request, 'request_success.html')

@@ -26,5 +26,7 @@ urlpatterns = [
     path("success/", views.payment_success, name="payment_success"),
     path('verify_payment', views.verify_payment, name='verify_payment'),
     path("generate/", views.generate_jewellery_image, name="generate_jewellery_image"),
+    path("request_jewellery/", views.request_jewellery, name="request_jewellery"),
+    path('request-success/', views.request_success, name='request_success'),
 ]
 

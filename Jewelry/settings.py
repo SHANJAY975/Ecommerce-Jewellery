@@ -161,6 +161,7 @@ EMAIL_HOST_PASSWORD = config('PASSCODE')
 # Default sender
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
+LOGIN_URL = '/login'
 
 import os 
 

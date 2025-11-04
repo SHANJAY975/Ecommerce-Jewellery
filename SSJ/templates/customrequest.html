@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container my-5">
+    <h2 class="text-center fw-bold mb-4">Request Custom Jewellery 💍</h2>
+
+    <form method="POST" enctype="multipart/form-data" class="border p-4 rounded shadow-sm bg-light">
+        {% csrf_token %}
+        
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Upload or Choose an Image:</label>
+            {{ form.image }}
+            <p class="text-muted small mt-1">You can upload your own design or use a previously generated one.</p>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Enter Weight (in grams):</label>
+            {{ form.weight }}
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Description / Comments (optional):</label>
+            {{ form.comments }}
+        </div>
+
+        <button type="submit" class="btn btn-warning fw-semibold w-100">Send Request</button>
+    </form>
+</div>
+
+{% endblock %}

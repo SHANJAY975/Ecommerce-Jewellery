@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 import re
-from SSJ.models import Category, Product, Order
+from SSJ.models import Category, JewelleryRequest, Product, Order
 
 class RegisterForm(forms.ModelForm):
     username = forms.CharField(label='Username', max_length=100, required=True)
@@ -118,3 +118,12 @@ class OrderForm(forms.ModelForm):
             cleaned_data['shipping_zip'] = None
 
         return cleaned_data
+
+
+class JewelleryRequestForm(forms.ModelForm):
+    class Meta:
+        model = JewelleryRequest
+        fields = ['image', 'weight', 'comments']
+        widgets = {
+            'comments': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Optional comments...'}),
+        }
